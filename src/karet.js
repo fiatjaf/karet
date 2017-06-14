@@ -1,5 +1,5 @@
 import * as React from "react"
-import {Observable} from "kefir"
+import isObs from "is-observable"
 import {
   array0,
   assocPartialU,
@@ -24,8 +24,6 @@ const DD_REF = "$$ref"
 
 const reactElement = React.createElement
 const Component = React.Component
-
-const isObs = x => x instanceof Observable
 
 //
 
@@ -58,7 +56,7 @@ const FromKefir = /*#__PURE__*/inherit(function FromKefir(props) {
   componentWillUnmount() {
     const callback = this.callback
     if (callback)
-      this.props.observable.offAny(callback)
+      offAny1(callback, this.props.observable)
   },
   doSubscribe({observable}) {
     if (isObs(observable)) {
@@ -75,7 +73,7 @@ const FromKefir = /*#__PURE__*/inherit(function FromKefir(props) {
         }
       }
       this.callback = callback
-      observable.onAny(callback)
+      onAny1(callback, observable)
     } else {
       this.rendered = observable || null
     }
@@ -206,13 +204,18 @@ function forEachInProps(props, extra, fn) {
 //
 
 function incValues(self) { self.values += 1 }
-function offAny1(handlers, obs) { obs.offAny(handlers) }
+function offAny1(handler, obs) {
+  handler.subscription.unsubscribe()
+}
 function offAny(handlers, obs) {
   const handler = handlers.pop()
   if (handler)
-    obs.offAny(handler)
+    offAny1(handler, obs)
 }
-function onAny1(handlers, obs) { obs.onAny(handlers) }
+function onAny1(handler, obs) {
+  let subs = obs.subscribe({next: handler, error: handler, complete: handler})
+  handler.subscription = subs
+}
 function onAny(self, obs) {
   const handler = e => {
     const handlers = self.handlers
@@ -243,7 +246,7 @@ function onAny(self, obs) {
     }
   }
   self.handlers.push(handler)
-  obs.onAny(handler)
+  onAny1(handler, obs)
 }
 
 const FromClass = /*#__PURE__*/inherit(function FromClass(props) {
