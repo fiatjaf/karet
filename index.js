@@ -1,6 +1,6 @@
-import * as React from "react"
-import isObs from "is-observable"
-import {
+const React = require('react')
+const isObs = require('is-observable')
+const {
   array0,
   assocPartialU,
   dissocPartialU,
@@ -8,92 +8,44 @@ import {
   isArray,
   isString,
   object0
-} from "infestines"
+} = require('infestines')
 
-//
-
-const VALUE = "value"
-const ERROR = "error"
-const END = "end"
-const STYLE = "style"
-const CHILDREN = "children"
-const LIFT = "karet-lift"
-const DD_REF = "$$ref"
-
-//
+const VALUE = 'value'
+const ERROR = 'error'
+const END = 'end'
+const STYLE = 'style'
+const CHILDREN = 'children'
+const LIFT = 'karet-lift'
+const DD_REF = '$$ref'
 
 const reactElement = React.createElement
 const Component = React.Component
 
-//
-
-function doSubscribe(self, props) {
+function doSubscribe (self, props) {
   self.at = 0
   self.doSubscribe(props)
   self.at = 1
 }
 
-const LiftedComponent = /*#__PURE__*/inherit(function LiftedComponent(props) {
+const LiftedComponent = /*#__PURE__*/inherit(function LiftedComponent (props) {
   Component.call(this, props)
   this.at = 0
 }, Component, {
-  componentWillReceiveProps(nextProps) {
+  componentWillReceiveProps (nextProps) {
     this.componentWillUnmount()
     doSubscribe(this, nextProps)
   },
-  componentWillMount() {
+  componentWillMount () {
     doSubscribe(this, this.props)
   }
 })
 
-//
-
-const FromKefir = /*#__PURE__*/inherit(function FromKefir(props) {
-  LiftedComponent.call(this, props)
-  this.callback =
-  this.rendered = null
-}, LiftedComponent, {
-  componentWillUnmount() {
-    const callback = this.callback
-    if (callback)
-      offAny1(callback, this.props.observable)
-  },
-  doSubscribe({observable}) {
-    if (isObs(observable)) {
-      const callback = e => {
-        switch (e.type) {
-          case VALUE:
-            this.rendered = e.value || null
-            this.at && this.forceUpdate()
-            break
-          case ERROR:
-            throw e.value
-          case END:
-            this.callback = null
-        }
-      }
-      this.callback = callback
-      onAny1(callback, observable)
-    } else {
-      this.rendered = observable || null
-    }
-    this.at = 1
-  },
-  render() {
-    return this.rendered
-  }
-})
-
-export const fromKefir = observable => reactElement(FromKefir, {observable})
-
-//
-
-function renderChildren(children, self, values) {
+function renderChildren (children, self, values) {
   if (isObs(children)) {
     return values[self.at++]
   } else if (isArray(children)) {
     let newChildren = children
-    for (let i=0, n=children.length; i<n; ++i) {
+    for (let i = 0, n = children.length; i < n; ++i) {
       const childI = children[i]
       let newChildI = childI
       if (isObs(childI)) {
@@ -102,8 +54,7 @@ function renderChildren(children, self, values) {
         newChildI = renderChildren(childI, self, values)
       }
       if (newChildI !== childI) {
-        if (newChildren === children)
-          newChildren = children.slice(0)
+        if (newChildren === children) newChildren = children.slice(0)
         newChildren[i] = newChildI
       }
     }
@@ -113,7 +64,7 @@ function renderChildren(children, self, values) {
   }
 }
 
-function renderStyle(style, self, values) {
+function renderStyle (style, self, values) {
   let newStyle = null
   for (const i in style) {
     const styleI = style[i]
@@ -121,8 +72,7 @@ function renderStyle(style, self, values) {
       if (!newStyle) {
         newStyle = {}
         for (const j in style) {
-          if (j === i)
-            break
+          if (j === i) break
           newStyle[j] = style[j]
         }
       }
@@ -134,7 +84,7 @@ function renderStyle(style, self, values) {
   return newStyle || style
 }
 
-function render(self, values) {
+function render (self, values) {
   const props = self.props
 
   let type = null
@@ -147,7 +97,7 @@ function render(self, values) {
     const val = props[key]
     if (CHILDREN === key) {
       newChildren = renderChildren(val, self, values)
-    } else if ("$$type" === key) {
+    } else if ('$$type' === key) {
       type = props[key]
     } else if (DD_REF === key) {
       newProps = newProps || {}
@@ -173,29 +123,25 @@ function render(self, values) {
 
 //
 
-function forEachInChildrenArray(children, extra, fn) {
-  for (let i=0, n=children.length; i<n; ++i) {
+function forEachInChildrenArray (children, extra, fn) {
+  for (let i = 0, n = children.length; i < n; ++i) {
     const childI = children[i]
-    if (isObs(childI))
-      fn(extra, childI)
-    else if (isArray(childI))
-      forEachInChildrenArray(childI, extra, fn)
+    if (isObs(childI)) fn(extra, childI)
+    else if (isArray(childI)) forEachInChildrenArray(childI, extra, fn)
   }
 }
 
-function forEachInProps(props, extra, fn) {
+function forEachInProps (props, extra, fn) {
   for (const key in props) {
     const val = props[key]
     if (isObs(val)) {
       fn(extra, val)
     } else if (CHILDREN === key) {
-      if (isArray(val))
-        forEachInChildrenArray(val, extra, fn)
+      if (isArray(val)) forEachInChildrenArray(val, extra, fn)
     } else if (STYLE === key) {
       for (const k in val) {
         const valK = val[k]
-        if (isObs(valK))
-          fn(extra, valK)
+        if (isObs(valK)) fn(extra, valK)
       }
     }
   }
@@ -203,25 +149,31 @@ function forEachInProps(props, extra, fn) {
 
 //
 
-function incValues(self) { self.values += 1 }
-function offAny1(handler, obs) {
+function incValues (self) { self.values += 1 }
+
+function wrapHandler (handler, type) {
+  return value => handler({type, value})
+}
+function offAny1 (handler, obs) {
   handler.subscription.unsubscribe()
 }
-function offAny(handlers, obs) {
+function offAny (handlers, obs) {
   const handler = handlers.pop()
-  if (handler)
-    offAny1(handler, obs)
+  if (handler) offAny1(handler, obs)
 }
-function onAny1(handler, obs) {
-  let subs = obs.subscribe({next: handler, error: handler, complete: handler})
+function onAny1 (handler, obs) {
+  let subs = obs.subscribe({
+    next: wrapHandler(handler, VALUE),
+    error: wrapHandler(handler, ERROR),
+    complete: wrapHandler(handler, END)
+  })
   handler.subscription = subs
 }
-function onAny(self, obs) {
+function onAny (self, obs) {
   const handler = e => {
     const handlers = self.handlers
-    let idx=0
-    while (handlers[idx] !== handler)
-      ++idx
+    var idx = 0
+    while (handlers[idx] !== handler) ++idx
     switch (e.type) {
       case VALUE: {
         const value = e.value
@@ -236,11 +188,10 @@ function onAny(self, obs) {
       default: {
         handlers[idx] = null
         const n = handlers.length
-        if (n !== self.values.length)
-          return
-        for (let i=0; i < n; ++i)
-          if (handlers[i])
-            return
+        if (n !== self.values.length) return
+        for (let i = 0; i < n; ++i) {
+          if (handlers[i]) return
+        }
         self.handlers = null
       }
     }
@@ -249,12 +200,12 @@ function onAny(self, obs) {
   onAny1(handler, obs)
 }
 
-const FromClass = /*#__PURE__*/inherit(function FromClass(props) {
+const FromClass = /*#__PURE__*/inherit(function FromClass (props) {
   LiftedComponent.call(this, props)
   this.values = this
   this.handlers = null
 }, LiftedComponent, {
-  componentWillUnmount() {
+  componentWillUnmount () {
     const handlers = this.handlers
     if (handlers instanceof Function) {
       forEachInProps(this.props, handlers, offAny1)
@@ -262,7 +213,7 @@ const FromClass = /*#__PURE__*/inherit(function FromClass(props) {
       forEachInProps(this.props, handlers.reverse(), offAny)
     }
   },
-  doSubscribe(props) {
+  doSubscribe (props) {
     this.values = 0
     forEachInProps(props, this, incValues)
     const n = this.values
@@ -298,45 +249,42 @@ const FromClass = /*#__PURE__*/inherit(function FromClass(props) {
         forEachInProps(props, this, onAny)
     }
   },
-  render() {
+  render () {
     if (this.handlers instanceof Function) {
       const value = this.values
-      if (value === this)
-        return null
+      if (value === this) return null
       return render(this, [value])
     } else {
       const values = this.values
-      for (let i=0, n=values.length; i<n; ++i)
-        if (values[i] === this)
-          return null
+      for (let i = 0, n = values.length; i < n; ++i) {
+        if (values[i] === this) return null
+      }
       return render(this, values)
     }
   }
 })
 
-//
-
-function hasObsInChildrenArray(i, children) {
+function hasObsInChildrenArray (i, children) {
   for (const n = children.length; i < n; ++i) {
-    const child = children[i]
-    if (isObs(child) || isArray(child) && hasObsInChildrenArray(0, child))
+    let child = children[i]
+    if (isObs(child) || isArray(child) && hasObsInChildrenArray(0, child)) {
       return true
+    }
   }
   return false
 }
 
-function hasObsInProps(props) {
+function hasObsInProps (props) {
   for (const key in props) {
-    const val = props[key]
+    let val = props[key]
     if (isObs(val)) {
       return true
     } else if (CHILDREN === key) {
-      if (isArray(val) && hasObsInChildrenArray(0, val))
-        return true
+      if (isArray(val) && hasObsInChildrenArray(0, val)) return true
     } else if (STYLE === key) {
-      for (const k in val)
-        if (isObs(val[k]))
-          return true
+      for (const k in val) {
+        if (isObs(val[k])) return true
+      }
     }
   }
   return false
@@ -344,19 +292,24 @@ function hasObsInProps(props) {
 
 //
 
-function filterProps(type, props) {
-  const newProps = {"$$type": type}
+function filterProps (type, props) {
+  const newProps = {'$$type': type}
   for (const key in props) {
     const val = props[key]
-    if ("ref" === key)
-      newProps[DD_REF] = val
-    else if (LIFT !== key)
-      newProps[key] = val
+    if ('ref' === key) newProps[DD_REF] = val
+    else if (LIFT !== key) newProps[key] = val
   }
   return newProps
 }
 
-export function createElement(...args) {
+module.exports = process.env.NODE_ENV === 'production'
+  ? /*#__PURE__*/assocPartialU('createElement', createElement, React)
+  : /*#__PURE__*/Object.defineProperty(assocPartialU('createElement', createElement, dissocPartialU('PropTypes', React)), 'PropTypes', {
+    get: (React => () => React.PropTypes)(React)
+  })
+
+module.exports.createElement = createElement
+function createElement (...args) {
   const type = args[0]
   const props = args[1] || object0
   if (isString(type) || props[LIFT]) {
@@ -370,13 +323,4 @@ export function createElement(...args) {
   return reactElement(...args)
 }
 
-export default process.env.NODE_ENV === "production"
-  ? /*#__PURE__*/assocPartialU("createElement", createElement, React)
-  : /*#__PURE__*/Object.defineProperty(assocPartialU("createElement", createElement, dissocPartialU("PropTypes", React)), "PropTypes", {
-    get: (React => () => React.PropTypes)(React)
-  })
-
-//
-
-export const fromClass = Class => props =>
-  reactElement(FromClass, filterProps(Class, props))
+module.exports.fromClass = Class => props => reactElement(FromClass, filterProps(Class, props))
