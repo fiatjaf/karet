@@ -15,7 +15,7 @@ const ERROR = 'error'
 const END = 'end'
 const STYLE = 'style'
 const CHILDREN = 'children'
-const LIFT = 'karet-lift'
+const LIFT = 'oaret-lift'
 const DD_REF = '$$ref'
 
 const reactElement = React.createElement
